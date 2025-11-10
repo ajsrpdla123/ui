@@ -1,0 +1,260 @@
+/* 왼쪽 팝업 내부 요소 스타일 */
+
+/* 섹션 기본 스타일 */
+.popup-section {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #E0E0E0;
+    margin: 0 0 10px 0;
+}
+
+/* 1. 유저 정보 */
+.user-info-box {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #3a9d70, #2a7b54);
+}
+
+.profile-pic {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+}
+
+.user-text {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.user-id {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.user-name {
+    font-size: 15px;
+    color: #dcdcdc;
+}
+
+.user-detail-btn {
+    background-color: #ffeb3b;
+    color: #333;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* 2. 접기/펼치기 섹션 헤더 */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.toggle-btn img {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+/* 3. 실시간 영상 */
+.camera-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.camera-btn {
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px 10px;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: background-color 0.2s;
+}
+
+.camera-btn:hover { background-color: #3f3f3f; }
+
+.camera-btn img {
+    width: 20px;
+    height: 30px;
+}
+
+/* 4. 트랙터 및 작업기 정보 */
+.info-image {
+    width: 100%;
+    border-radius: 8px;
+    object-fit: cover;
+    background-color: #000;
+}
+
+.info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2c2c2c;
+    padding: 12px 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.info-bar span:first-child { color: #9e9e9e; }
+
+/* 접기/펼치기 애니메이션 (max-height 방식) */
+.section-content {
+    max-height: 300px;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+}
+.popup-section.collapsed .section-content { max-height: 0; }
+.popup-section.collapsed .toggle-btn img { transform: rotate(-90deg); }
+
+/* 왼쪽 팝업 스크롤바 디자인 */
+#left-popup::-webkit-scrollbar { width: 8px; }
+#left-popup::-webkit-scrollbar-track { background: #2c2c2c; border-radius: 4px; }
+#left-popup::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+#left-popup::-webkit-scrollbar-thumb:hover { background: #888; }
+
+/* =========================================================
+   ⬇⬇⬇ 여기부터 추가: 왼쪽 팝업이 화면에서 안 잘리게 고정
+   ========================================================= */
+:root{
+  /* 페이지 상단 배너(헤더) 높이와 화면 가장자리 여백 – 필요 시 조정 */
+  --left-topbar-h: 48px;
+  --left-side-gap: 12px;
+}
+
+/* #left-popup만 대상(오른쪽과 분리) */
+#left-popup{
+  position: fixed;                                   /* 화면 기준 고정 */
+  top:    calc(var(--left-topbar-h) + var(--left-side-gap));
+  bottom: var(--left-side-gap);
+  left:   var(--left-side-gap);
+  z-index: 30;
+
+  /* 폭: 화면에 따라 유연 + 최소/최대 범위 */
+  width: clamp(320px, 26vw, 420px);
+
+  /* 세로: 화면에 맞추고 내용은 내부 스크롤 */
+  max-height: calc(100vh - var(--left-topbar-h) - (var(--left-side-gap) * 2));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  /* 내부 컨텐츠가 보더/패딩으로 넘치지 않게 */
+  box-sizing: border-box;
+}
+
+/* 화면이 조금 좁을 때 – 좌/우가 함께 보일 수 있도록 약간 줄이기 */
+@media (max-width: 1200px){
+  #left-popup{ width: calc(50vw - (var(--left-side-gap) * 1.5)); }
+}
+
+/* 더 좁은 화면(태블릿 등) – 최소/최대 범위 재조정 */
+@media (max-width: 900px){
+  #left-popup{ width: clamp(300px, 45vw, 380px); }
+}
+/* ===== LEFT popup safety overrides ===== */
+
+/* 항상 보이게(프로젝트 어딘가에서 display:none 되는 경우 무력화) */
+#left-popup{ 
+  display:block !important; 
+  z-index: 1000 !important;   /* 지도/캔버스보다 위로 */
+}
+
+/* hidden/visible 토글과도 호환 */
+#left-popup.hidden{ display:none !important; }
+#left-popup.visible{ display:block !important; }
+
+/* 위치/크기 보정이 없다면(혹시 지웠다면) 기본값 보강 */
+#left-popup{
+  position: fixed;
+  top:    calc(var(--left-topbar-h, 48px) + var(--left-side-gap, 12px));
+  bottom: var(--left-side-gap, 12px);
+  left:   var(--left-side-gap, 12px);
+  width: clamp(320px, 26vw, 420px);
+  max-height: calc(100vh - var(--left-topbar-h, 48px) - (var(--left-side-gap, 12px) * 2));
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+/* === LEFT: 화면 밖으로 밀림 방지/폭 자동 조절/변환 초기화 === */
+:root{
+  /* 중앙 지도 최소 보장 폭(원하는 값으로 조절: 560~720px 권장) */
+  --center-min: 640px;
+  --left-side-gap: 12px;
+}
+
+/* 위치 고정 + 변환 리셋 + 폭 계산 */
+#left-popup{
+  position: fixed;
+  top:    calc(var(--left-topbar-h, 48px) + var(--left-side-gap));
+  bottom: var(--left-side-gap);
+  left:   max(env(safe-area-inset-left), var(--left-side-gap));
+  right:  auto;
+
+  /* ⚡ 폭: 화면-중앙 최소폭을 뺀 나머지의 절반을 사용하되 안전 범위로 clamp */
+  width: clamp(300px,
+               calc((100vw - var(--center-min)) / 2 - var(--left-side-gap)),
+               420px);
+  max-width: 48vw;
+
+  max-height: calc(100vh - var(--left-topbar-h, 48px) - (var(--left-side-gap) * 2));
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+
+  /* 슬라이드/이동 잔재가 있다면 무효화 */
+  transform: none !important;
+  margin: 0 !important;
+}
+
+/* 화면이 좁아질수록 양쪽이 동시에 보이게 추가 세이프가드 */
+@media (max-width: 1280px){
+  #left-popup{
+    width: clamp(280px, calc(45vw - var(--left-side-gap)), 380px);
+  }
+}
+/* === 헤더 전체 클릭 가능하게 표시 === */
+#left-popup .section-header{ cursor: pointer; }
+
+/* === 접기/펼치기 애니메이션 보완 === */
+/* 기본값을 0으로 두고 JS가 내용 높이에 맞춰 max-height를 계산해 넣음 */
+#left-popup .section-content{
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+/* 닫힘 상태 */
+#left-popup .popup-section.collapsed .section-content{ max-height: 0 !important; }
+/* 아이콘 회전(이미 가지고 있는 규칙과 합쳐 사용) */
+#left-popup .popup-section.collapsed .toggle-btn img{ transform: rotate(-90deg); }

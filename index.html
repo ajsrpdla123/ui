@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UI 구현</title>
+
+  <!-- libs -->
+  <script src="./js/jquery.min.js"></script>
+  <script src="./js/babylon.js"></script>
+  <script src="./js/babylon.loaders.min.js"></script>
+
+  <!-- styles -->
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/left.css" />
+  <link rel="stylesheet" href="./css/right.css" />
+  <link rel="stylesheet" href="./css/map.css" />
+  <link rel="stylesheet" href="./css/log.css" />
+  <link rel="stylesheet" href="./css/safe_zone.css" />
+</head>
+
+<body>
+  <!-- 저장된 안전 구역 리스트 -->
+  <div id="saved-zones-list-popup" class="hidden">
+    <div class="popup-header">
+      <h3>저장된 안전 구역</h3>
+      <button id="close-zones-list-btn">&times;</button>
+    </div>
+    <div class="popup-body">
+      <ul id="saved-zones-list"></ul>
+    </div>
+    <div class="popup-footer">
+      <button id="create-new-zone-btn">새 구역 만들기</button>
+    </div>
+  </div>
+
+  <!-- 왼쪽 사이드 -->
+  <div id="left-popup" class="side-popup">
+    <div class="popup-section">
+      <h3 class="section-title">유저 정보</h3>
+      <div class="user-info-box">
+        <img class="profile-pic" src="./assets/user.png" alt="User Profile" />
+        <div class="user-text">
+          <span class="user-id">SCNU</span>
+          <span class="user-name">O.F-Killer</span>
+        </div>
+        <button class="user-detail-btn">사용자 정보</button>
+      </div>
+    </div>
+
+    <div class="popup-section">
+      <div class="section-header">
+        <h3 class="section-title">실시간 영상</h3>
+        <button class="toggle-btn">
+          <img src="./assets/live_video/01_folding butten.png" alt="Toggle" />
+        </button>
+      </div>
+      <div class="section-content">
+        <div class="camera-buttons">
+          <button class="camera-btn" data-video-src="assets/frontCameraSample.mp4">
+            <img src="./assets/live_video/01_canera_front.png" alt="front" />
+            <span>Front Camera</span>
+          </button>
+          <button class="camera-btn" data-video-src="assets/rearCameraSample.mp4">
+            <img src="./assets/live_video/01_camera_basck.png" alt="rear" />
+            <span>Rear Camera</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-section">
+      <div class="section-header">
+        <h3 class="section-title">트랙터 정보</h3>
+        <button class="toggle-btn">
+          <img src="./assets/live_video/01_folding butten.png" alt="Toggle" />
+        </button>
+      </div>
+      <div class="section-content">
+        <img class="info-image" src="./assets/tractor_implement_info/01_tractor.png" alt="Tractor" />
+        <div class="info-bar"><span>모델 명</span><span>Kubota MR1007(2022)</span></div>
+        <div class="info-bar"><span>사용 시간</span><span>1005hour</span></div>
+      </div>
+    </div>
+
+    <div class="popup-section">
+      <div class="section-header">
+        <h3 class="section-title">작업기 정보</h3>
+        <button class="toggle-btn">
+          <img src="./assets/live_video/01_folding butten.png" alt="Toggle" />
+        </button>
+      </div>
+      <div class="section-content">
+        <img class="info-image" src="./assets/tractor_implement_info/01_imple.png" alt="Rotavator" />
+        <div class="info-bar"><span>작업기명</span><span>Rotavator</span></div>
+        <div class="info-bar"><span>작업기 폭</span><span>2.4m</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 오른쪽 사이드 -->
+  <div id="right-popup" class="side-popup">
+    <div class="top-buttons-container">
+      <button class="top-action-btn" id="hazard-log-btn">
+        <img src="./assets/drivin_hazard-log/01_warning.png" alt="warn" />
+        <span>주행 위험 기록</span>
+      </button>
+      <button class="top-action-btn" id="safe-zone-btn">
+        <img src="./assets/safety_zone/01_safe place.png" alt="안전 구역 설정" />
+        <span>안전 구역 설정</span>
+      </button>
+    </div>
+
+    <div class="digital-cluster-container cluster-card">
+      <div class="cluster-header"><h3>Digital Cluster</h3></div>
+
+      <!-- 날씨 -->
+      <div class="cluster-row weather-row">
+        <div class="cluster-widget weather">
+          <img src="./assets/digital_cluster/01_weather.png" alt="날씨" />
+          <span>날씨</span>
+        </div>
+        <div class="cluster-widget">
+          <span class="value">43°</span>
+        </div>
+      </div>
+
+      <!-- 실시간 차량 상태 / 경로 오차(상단 얇은 라인) -->
+      <div class="cluster-row vehicle-status-widget">
+        <div class="status-main-line">
+          <div class="title-with-icon">
+            <img src="./assets/digital_cluster/01_vehicle condition.png" alt="차량 상태" />
+            <span>실시간 차량 상태</span>
+          </div>
+          <div class="value">
+            <span class="label">경로 오차</span>
+            <span id="deviation-value">0.0</span><small>cm</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- === 상단 미니정보 3분할: 좌(주행모드) | 중앙(차량오차) | 우(수신상태) === -->
+      <div class="quick-strip">
+        <!-- 1) 주행모드 : 기존 ID 유지 -->
+        <div class="qcard left">
+          <div class="qtitle">주행모드</div>
+          <div class="qvalue qbadge" id="drive-mode-badge">정지</div>
+        </div>
+
+        <!-- 2) 차량 오차(큰 숫자) : 기존 #vehicle-error-big 유지, 위치만 이동 -->
+        <div class="qcard center">
+          <div class="center-error">
+            <div class="center-error-label">차량 오차</div>
+            <div class="center-error-value">
+              <span id="vehicle-error-big">0</span><small>cm</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3) 수신상태 : 기존 ID 유지 -->
+        <div class="qcard right">
+          <div class="qtitle">수신상태</div>
+          <div class="qvalue">
+            <img src="./assets/digital_cluster/01_signal.png" alt="rx" class="qicon" />
+            <span id="rx-badge" class="qbadge q-ok">OK</span>
+          </div>
+        </div>
+      </div>
+      <!-- === /상단 미니정보 3분할 === -->
+
+      <!-- 3D -->
+      <div class="tractor-graphic-view">
+        <canvas id="renderCanvas"></canvas>
+      </div>
+
+      <!-- 게이지 -->
+      <div class="gauges-card">
+        <div class="gauges-row">
+          <div class="gauge">
+            <span class="label">Speed</span>
+            <span class="value"><span id="speed-value">0.0</span> <span class="unit">km/h</span></span>
+          </div>
+          <div class="gauge">
+            <span class="label">Engine RPM</span>
+            <span class="value"><span id="rpm-value">0</span> <span class="unit">rpm</span></span>
+          </div>
+          <div class="gauge">
+            <span class="label">Fuel Gauge</span>
+            <span class="value"><span id="fuel-gauge-value">0</span> <span class="unit">%</span></span>
+          </div>
+        </div>
+      </div>
+    </div><!-- .digital-cluster-container -->
+  </div><!-- #right-popup -->
+
+  <!-- 상단 위치 알림 -->
+  <div id="location-popup" class="central-popup">
+    <div class="location-info-box">
+      <img src="./assets/basic_screen/01_icon_spot.png" class="loc-icon" alt="loc" />
+      <span>경기도 수원시 권선구 고색동</span>
+    </div>
+  </div>
+
+  <!-- 하단 작업 정보 -->
+  <div id="bottom-info-popup" class="central-popup">
+    <div class="info-box">
+      <div class="label">
+        <img src="./assets/basic_screen/01_underbar_icon_ruler.png" alt="면적" /> 작업 면적
+      </div>
+      <div class="value">00 <span>ha</span></div>
+    </div>
+    <div class="info-box">
+      <div class="label">
+        <img src="./assets/basic_screen/01_underbar_icon_time.png" alt="시간" /> 작업 시간
+      </div>
+      <div class="value">00:03:04</div>
+    </div>
+  </div>
+
+  <!-- 상단 배너 -->
+  <header class="top-banner">
+    <div class="banner-left">
+      <button class="monitor-btn">Monitor</button>
+    </div>
+    <div class="banner-right">
+      <span class="greeting-text">Good Afternoon, scnu</span>
+      <div class="icon-group">
+        <a href="#" class="icon-btn" aria-label="User Profile">
+          <img src="./assets/basic_screen/01_topbar_icon_user.png" alt="user" />
+        </a>
+        <a href="#" class="icon-btn" aria-label="Logout">
+          <img src="./assets/basic_screen/01_topbar_icon_login.png" alt="login" />
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 지도 -->
+  <main class="map-container">
+    <div id="map-wrap">
+      <img src="./assets/map.png" id="map-image" alt="지도 이미지" class="map-image" />
+      <div id="marker"></div>
+      <canvas id="drawing-canvas"></canvas>
+    </div>
+  </main>
+
+  <!-- 비디오 모달 -->
+  <div id="videoModal" class="video-modal">
+    <div class="video-popup-box">
+      <div class="popup-header">
+        <h3 id="videoTitle" class="video-title"></h3>
+        <button id="closeVideoBtn" class="close-video-btn">&times;</button>
+      </div>
+      <video id="videoPlayer" controls autoplay muted playsinline></video>
+    </div>
+  </div>
+
+  <!-- 전복 경고 -->
+  <div id="rollover-alert-popup" class="hidden">
+    <div class="alert-icon">
+      <img src="./assets/drivin_hazard-log/01_warning.png" alt="경고" />
+    </div>
+    <div class="alert-text">
+      <h3>차량 전복 주의</h3>
+      <span>차량의 기울기가 위험 수준에 도달했습니다.</span>
+    </div>
+    <button id="close-rollover-alert-btn" class="close-alert-btn">&times;</button>
+  </div>
+
+  <!-- 위험 기록 모달 -->
+  <div id="hazard-log-modal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>주행 위험 기록</h2>
+        <button id="close-hazard-modal-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="hazard-log-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 안전 구역 도구 -->
+  <div id="drawing-toolbar" class="hidden">
+    <button id="reset-zone-btn">
+      <img src="./assets/safety_zone/03_safe place_reset.png" alt="Reset" />
+    </button>
+    <button id="draw-zone-btn">
+      <img src="./assets/safety_zone/03_safe place_path.png" alt="Draw" />
+    </button>
+    <button id="confirm-zone-btn">
+      <img src="./assets/safety_zone/03_safe place_check.png" alt="Confirm" />
+    </button>
+  </div>
+
+  <!-- 안전 구역 등록 -->
+  <div id="confirm-zone-modal" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>안전 구역을 등록하시겠습니까?</h2>
+      </div>
+      <div class="modal-body">
+        <label for="zone-name">구역 이름 입력</label>
+        <input type="text" id="zone-name" placeholder="예) 1번 농지, 특수-상-7번 등" />
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-registration-btn" class="cancel-btn">취소</button>
+        <button id="process-registration-btn" class="confirm-btn">안전 경로 등록하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="success-alert" class="hidden">
+    <span>✅ 안전 구역 등록이 완료되었습니다.</span>
+  </div>
+
+  <!-- scripts -->
+  <script src="./js/papaparse.min.js"></script>
+  <script src="./js/main.js"></script>
+  <script src="./js/map_data.js"></script>
+  <script src="./js/log.js"></script>
+  <script src="./js/safe_zone.js"></script>
+
+  <!-- === [추가: 상태별 색 적용용 최종 스타일] === -->
+  <style>
+    /* 기본: 흰색 */
+    #right-popup #vehicle-error-big,
+    #right-popup #deviation-value{
+      color:#fff !important;
+      text-shadow:none !important;
+    }
+    /* 경고(빨강) */
+    body[data-risk="warning"] #right-popup #vehicle-error-big,
+    body[data-risk="warning"] #right-popup #deviation-value{
+      color:#ff4d4d !important;
+      text-shadow:0 2px 10px rgba(255,77,77,.25) !important;
+    }
+    /* 주의(호박색) — 최우선 */
+    body[data-risk="caution"] #right-popup #vehicle-error-big,
+    body[data-risk="caution"] #right-popup #deviation-value{
+      color:#ffb74d !important;
+      text-shadow:0 2px 10px rgba(255,183,77,.22) !important;
+    }
+  </style>
+
+  <!-- === [추가: 위험도 → 색상 동기화 스니펫 (주의 우선)] === -->
+  <script>
+  (function(){
+    function isRolloverPopupVisible(){
+      var el = document.getElementById('rollover-alert-popup');
+      return !!(el && !el.classList.contains('hidden'));
+    }
+    function syncRisk(){
+      var b = document.body;
+      var risk = 'none';
+      // 1) 주의가 최우선
+      if (b.classList.contains('driving-caution-active')) {
+        risk = 'caution';
+      }
+      // 2) 다음은 경고(전복) : 클래스 또는 팝업 노출
+      else if (b.classList.contains('rollover-active') || isRolloverPopupVisible()){
+        risk = 'warning';
+      }
+      b.setAttribute('data-risk', risk);
+    }
+    // body 클래스 변화 감지
+    new MutationObserver(syncRisk).observe(document.body, {
+      attributes:true, attributeFilter:['class']
+    });
+    // 전복 팝업 표시/숨김 변화 감지
+    var alertEl = document.getElementById('rollover-alert-popup');
+    if (alertEl){
+      new MutationObserver(syncRisk).observe(alertEl, {
+        attributes:true, attributeFilter:['class']
+      });
+    }
+    // 초기 동기화
+    syncRisk();
+  })();
+  </script>
+  <!-- 상태별 색상 '강제' 적용 (주의 > 경고 > 기본) -->
+  <style>
+    /* 기본값을 흰색으로 고정 (다른 규칙 무력화용) */
+    #right-popup #vehicle-error-big,
+    #right-popup #deviation-value{
+      color:#fff !important;
+      text-shadow:none !important;
+    }
+  </style>
+
+  <script>
+  (function(){
+    var big = document.getElementById('vehicle-error-big');
+    var small = document.getElementById('deviation-value');
+    if(!big){ return; }
+    var targets = [big].concat(small ? [small] : []);
+
+    function applyColor(hex, shadow){
+      targets.forEach(function(el){
+        el.style.setProperty('color', hex, 'important');              // ← CSS보다 우선
+        if (shadow) el.style.setProperty('text-shadow', shadow, 'important');
+        else el.style.removeProperty('text-shadow');
+      });
+    }
+
+    // 상태 계산: '주의'가 항상 우선, 그다음 '경고', 나머지는 기본
+    function computeRisk(){
+      var b = document.body;
+      var caution =
+        b.classList.contains('driving-caution-active') ||   // 너가 쓰는 '주의' 클래스
+        b.classList.contains('caution-active')      ||       // 대안 클래스
+        b.dataset.caution === '1';                           // 데이터 속성으로도 허용
+
+      // 경고(전복): 팝업 보이거나 클래스가 켜져 있을 때
+      var alertEl = document.getElementById('rollover-alert-popup');
+      var warning =
+        (!caution) && (
+          b.classList.contains('rollover-active') ||         // 너가 쓰는 '경고' 클래스
+          b.classList.contains('warning-active')  ||         // 대안 클래스
+          (alertEl && !alertEl.classList.contains('hidden')) // 전복 팝업 노출
+        );
+
+      return caution ? 'caution' : (warning ? 'warning' : 'none');
+    }
+
+    function sync(){
+      var risk = computeRisk();
+      if (risk === 'caution') {
+        applyColor('#ffb74d', '0 2px 10px rgba(255,183,77,.22)');
+      } else if (risk === 'warning') {
+        applyColor('#ff4d4d', '0 2px 10px rgba(255,77,77,.25)');
+      } else {
+        applyColor('#fff', '');
+      }
+    }
+
+    // 바디 클래스/팝업 표시 변화 감지 → 자동 동기화
+    new MutationObserver(sync).observe(document.body, {attributes:true, attributeFilter:['class','data-caution','data-warning']});
+    var alertEl = document.getElementById('rollover-alert-popup');
+    if (alertEl){
+      new MutationObserver(sync).observe(alertEl, {attributes:true, attributeFilter:['class']});
+    }
+
+    // (선택) 기울기 숫자로 자동 분류하고 싶다면: window.tiltDeg 값을 업데이트만 해줘
+    // 임계값은 원하는대로 바꿔도 됨
+    var CAUTION_DEG = 10, WARNING_DEG = 18;
+    var tiltTimer = setInterval(function(){
+      if (typeof window.tiltDeg !== 'number') return; // tiltDeg 없으면 패스
+      var t = Math.abs(window.tiltDeg);
+      if (t >= WARNING_DEG){
+        document.body.classList.add('rollover-active');
+        document.body.classList.remove('driving-caution-active');
+      } else if (t >= CAUTION_DEG){
+        document.body.classList.add('driving-caution-active');
+        document.body.classList.remove('rollover-active');
+      } else {
+        document.body.classList.remove('driving-caution-active','rollover-active');
+      }
+      sync();
+    }, 300);
+
+    // 외부 코드에서 직접 켜고 끄고 싶을 때 쓰는 API (원하면 사용)
+    window.setDrivingCaution = function(on){ document.body.classList.toggle('driving-caution-active', !!on); sync(); };
+    window.setRolloverWarning = function(on){ document.body.classList.toggle('rollover-active', !!on); sync(); };
+
+    // 초기 1회 적용
+    sync();
+  })();
+  </script>
+<!-- 상태별 색상 기본값(흰색) -->
+<style>
+  #right-popup #vehicle-error-big,
+  #right-popup #deviation-value{
+    color:#fff !important;
+    text-shadow:none !important;
+  }
+</style>
+
+<script>
+(function(){
+  var big = document.getElementById('vehicle-error-big');
+  var small = document.getElementById('deviation-value');
+  if(!big) return;
+  var targets = [big].concat(small ? [small] : []);
+
+  function applyColor(hex, shadow){
+    targets.forEach(function(el){
+      el.style.setProperty('color', hex, 'important');           // CSS 전부 이김
+      if (shadow) el.style.setProperty('text-shadow', shadow, 'important');
+      else el.style.removeProperty('text-shadow');
+    });
+  }
+
+  // 임계값(원하면 조정)
+  var CAUTION_DEG = 10, WARNING_DEG = 18;
+
+  // ★ 판정 순서: 경고 → 주의 → 기본
+  function computeRisk(){
+    var b = document.body;
+    var tilt = (typeof window.tiltDeg === 'number') ? Math.abs(window.tiltDeg) : null;
+
+    var alertEl = document.getElementById('rollover-alert-popup');
+    var isWarning =
+      b.classList.contains('rollover-active') ||
+      b.classList.contains('warning-active')  ||
+      (alertEl && !alertEl.classList.contains('hidden')) ||
+      (tilt !== null && tilt >= WARNING_DEG);
+
+    var isCaution =
+      b.classList.contains('driving-caution-active') ||
+      b.classList.contains('caution-active') ||
+      (tilt !== null && tilt >= CAUTION_DEG);
+
+    if (isWarning) return 'warning';   // ← 경고가 있으면 무조건 빨강
+    if (isCaution) return 'caution';
+    return 'none';
+  }
+
+  function sync(){
+    var risk = computeRisk();
+    if (risk === 'warning'){
+      applyColor('#ff4d4d', '0 2px 10px rgba(255,77,77,.25)');
+    } else if (risk === 'caution'){
+      applyColor('#ffb74d', '0 2px 10px rgba(255,183,77,.22)');
+    } else {
+      applyColor('#fff', '');
+    }
+  }
+
+  // body 클래스/데이터 변화 감지
+  new MutationObserver(sync).observe(document.body, {
+    attributes:true, attributeFilter:['class','data-caution','data-warning']
+  });
+  // 전복 팝업 표시/숨김 변화 감지
+  var alertEl = document.getElementById('rollover-alert-popup');
+  if (alertEl){
+    new MutationObserver(sync).observe(alertEl, {attributes:true, attributeFilter:['class']});
+  }
+
+  // (선택) 기울기값으로 자동 분류: window.tiltDeg만 갱신해주면 됨
+  setInterval(sync, 250);
+
+  // 외부에서 직접 토글하고 싶을 때 쓸 수 있는 API
+  window.setDrivingCaution = function(on){ document.body.classList.toggle('driving-caution-active', !!on); sync(); };
+  window.setRolloverWarning = function(on){ document.body.classList.toggle('rollover-active', !!on); sync(); };
+
+  // 초기 적용
+  sync();
+})();
+</script>
+<script>
+/* === 작업시간: 새로고침하면 0부터 시작, 계속 카운트 === */
+(function(){
+  // 하단 두 번째 박스의 시간 표시 엘리먼트
+  var displayEl = document.querySelector('#bottom-info-popup .info-box:nth-child(2) .value');
+  if(!displayEl) return;
+
+  // 0부터 시작
+  function fmt(sec){
+    sec = Math.max(0, Math.floor(sec));
+    var h = Math.floor(sec/3600);
+    var m = Math.floor((sec%3600)/60);
+    var s = sec%60;
+    var pad = n => String(n).padStart(2,'0');
+    return pad(h)+':'+pad(m)+':'+pad(s);
+  }
+
+  // 초기값 00:00:00으로 고정
+  displayEl.textContent = '00:00:00';
+
+  // 시작 시각 고정 후 매초 갱신
+  var start = Date.now();
+  function tick(){
+    var elapsedSec = Math.floor((Date.now() - start) / 1000);
+    displayEl.textContent = fmt(elapsedSec);
+  }
+  tick(); // 즉시 0 표시
+  var timerId = setInterval(tick, 1000);
+
+  // (선택) 외부에서 쓸 수 있는 간단 API
+  window.workTimer = {
+    reset: function(){ start = Date.now(); displayEl.textContent = '00:00:00'; },
+    stop: function(){ clearInterval(timerId); },
+    start: function(){ clearInterval(timerId); start = Date.now(); tick(); timerId = setInterval(tick, 1000); }
+  };
+})();
+</script>
+
+</body>
+</html>
+
+</body>
+</html>

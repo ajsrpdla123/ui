@@ -1,0 +1,93 @@
+/* css/log.css */
+
+/* =================================== */
+/* 실시간 위험 경고 (화면 중앙) */
+/* =================================== */
+#rollover-alert-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    border-radius: 10px;
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    min-width: 400px;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+/* '주의' 단계 스타일 (노란색) */
+#rollover-alert-popup.warning-alert {
+    background-color: #fffbe6;
+    border: 2px solid #ffc107;
+}
+/* '경고' 단계 스타일 (붉은색) */
+#rollover-alert-popup.critical-alert {
+    background-color: #f8d7da;
+    border: 2px solid #f5c6cb;
+}
+#rollover-alert-popup .alert-icon img {
+    width: 40px;
+    height: 40px;
+}
+#rollover-alert-popup .alert-text h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.2rem;
+}
+#rollover-alert-popup.warning-alert .alert-text h3 { color: #d39e00; }
+#rollover-alert-popup.warning-alert .alert-text span { color: #665200; }
+#rollover-alert-popup.critical-alert .alert-text h3 { color: #721c24; }
+#rollover-alert-popup.critical-alert .alert-text span { color: #721c24; }
+
+#rollover-alert-popup .close-alert-btn {
+    background: none; border: none; font-size: 2rem;
+    cursor: pointer; position: absolute; top: 10px; right: 15px;
+}
+#rollover-alert-popup.warning-alert .close-alert-btn { color: #ffc107; }
+#rollover-alert-popup.critical-alert .close-alert-btn { color: #721c24; }
+
+
+/* =================================== */
+/* 주행 위험 기록 목록 팝업 */
+/* =================================== */
+.modal-backdrop {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 2000;
+}
+.modal-content {
+  background-color: #2c3e50; color: #ecf0f1;
+  padding: 25px; border-radius: 10px; width: 500px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #34495e;
+  padding-bottom: 15px; margin-bottom: 20px;
+}
+.modal-header h2 { margin: 0; font-size: 1.25rem; }
+.modal-header .close-btn {
+  background: none; border: none; color: #ecf0f1;
+  font-size: 2rem; cursor: pointer; line-height: 1;
+}
+.modal-body { max-height: 400px; overflow-y: auto; }
+
+#hazard-log-list .log-item {
+    display: flex; align-items: center; padding: 12px 15px;
+    border-radius: 5px; margin-bottom: 10px;
+}
+/* '경고' 로그 아이템 스타일 (붉은색) */
+#hazard-log-list .log-item.critical {
+    background-color: #e74c3c; color: white;
+}
+/* '주의' 로그 아이템 스타일 (노란색) */
+#hazard-log-list .log-item.warning {
+    background-color: #f39c12; color: #333;
+}
+#hazard-log-list .log-timestamp { font-family: monospace; margin-right: auto; }
+#hazard-log-list .log-type { font-weight: bold; }
+#hazard-log-list .no-logs { text-align: center; color: #95a5a6; padding: 20px; }
+.hidden { display: none !important; }

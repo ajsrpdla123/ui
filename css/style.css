@@ -1,0 +1,294 @@
+/* 기본 스타일 초기화 */
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #000000;
+    color: #E0E0E0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 상단 배너 전체 스타일 */
+.top-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2D2D2D;
+    padding: 8px 20px;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1001;
+}
+
+.monitor-btn {
+    background-color: #68D8AC;
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.monitor-btn:hover {
+    background-color: #55b991;
+}
+
+.banner-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.greeting-text {
+    font-size: 14px;
+    color: #68D8AC;
+}
+
+.icon-group {
+    display: flex;
+    background-color: #1C1C1C;
+    border-radius: 5px;
+    padding: 4px;
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.icon-btn:hover {
+    background-color: #4A4A4A;
+}
+
+.icon-btn img {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+/* 지도 컨테이너 */
+.map-container {
+    flex-grow: 1;
+    margin: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #1F1F1F;
+}
+
+.map-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 사이드 팝업창 공통 스타일 */
+.side-popup {
+    --side-popup-width: var(--side-popup-width, 380px); /* 다른 css에서 정의되면 그 값을 따름 */
+    --side-popup-gap: var(--side-popup-gap, 20px);      /* 화면 가장자리 여백 */
+    position: fixed;
+    top: 85px;
+    width: var(--side-popup-width);
+    height: calc(100vh - 105px);
+    max-height: 1280px;
+    background-color: rgba(28, 28, 28, 0.9);
+    border: 1px solid #444;
+    border-radius: 12px;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+    color: white;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+    transition: transform 0.35s ease, opacity 0.35s ease, visibility 0.35s ease;
+    will-change: transform, opacity;   /* 스르륵 성능 개선 */
+    opacity: 0;
+    overflow-y: auto;
+    visibility: hidden;
+}
+
+/* 왼쪽/오른쪽 시작 위치를 화면 가장자리로 붙임 */
+#left-popup {
+    left: var(--side-popup-gap);
+    transform: translateX(-120%); /* 숨김: 충분히 밖으로 */
+}
+
+#right-popup {
+    right: var(--side-popup-gap);
+    transform: translateX(120%);  /* 숨김: 충분히 밖으로 */
+}
+
+.side-popup.visible {
+    transform: translateX(0);      /* 보임: 제자리 */
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 반응형: 화면이 좁아질수록 조금씩 줄임 (다른 css의 변수와 충돌 없이 안전) */
+@media (max-width: 1440px) {
+  .side-popup { --side-popup-width: min(360px, 44vw); }
+}
+@media (max-width: 1200px) {
+  .side-popup { --side-popup-width: min(340px, 48vw); }
+}
+@media (max-width: 980px) {
+  .side-popup {
+    --side-popup-width: min(92vw, 360px);
+    --side-popup-gap: 12px;
+  }
+}
+
+/* 중앙 팝업 공통 스타일 */
+.central-popup {
+    position: fixed;
+    left: 50%;
+    background-color: rgba(28, 28, 28, 0.9);
+    border: 1px solid #444;
+    border-radius: 12px;
+    z-index: 999;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    color: white;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* 팝업 내 정보 상자 스타일 */
+.info-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.info-box .label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #9e9e9e;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.info-box .label img {
+    width: 20px;
+    height: 20px;
+}
+
+.info-box .value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.info-box .value span {
+    font-size: 16px;
+    font-weight: normal;
+}
+
+/* 작업 면적/시간 팝업 (하단) */
+#bottom-info-popup {
+    bottom: 100px;
+    top: auto;
+    transform: translate(-50%, 100%); /* 숨김 상태: 아래로 이동 */
+}
+
+/* 위치 정보 팝업 (상단) */
+#location-popup {
+    top: 100px;
+    bottom: auto;
+    transform: translate(-50%, -100%); /* 숨김 상태: 위로 이동 */
+}
+
+.central-popup.visible {
+    transform: translate(-50%, 0); /* 보임 상태: 원래 위치로 돌아옴 */
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 영상 재생 모달 */
+.video-modal {
+    position: fixed;
+    inset: 0;
+    display: none;                /* 기본 숨김 */
+    align-items: center;          /* 수직 중앙 */
+    justify-content: center;      /* 수평 중앙 */
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 2000;                /* 사이드(1000)보다 위 */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.video-modal.visible {
+    display: flex !important;     /* 중앙 정렬 활성화 */
+    opacity: 1;
+    visibility: visible;
+}
+
+.video-popup-box {
+    background-color: #000;       /* 비디오 주변 여백 없이 박스 자체를 검정 */
+    border: 1px solid #555;
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    width: min(90vw, 960px);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.popup-header {
+    position: absolute;
+    top: 8px; left: 12px; right: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 2;
+    pointer-events: none;         /* 클릭은 비디오로 통과 */
+}
+.popup-header .video-title { pointer-events: auto; }
+#closeVideoBtn { pointer-events: auto; }
+
+.video-title {
+    margin: 0;
+    font-size: 18px;
+    color: #f0f0f0;
+}
+
+.video-modal video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    border-radius: 0; /* video 주변 라운드 제거(박스에서 처리) */
+}
+
+.close-video-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-video-btn:hover {
+    color: #fff;
+}
+
+#map-modal.visible {
+    display: block;
+}
