@@ -42,6 +42,33 @@ document.addEventListener('DOMContentLoaded', () => {
     D:    -9.435695734,
   };
 
+  // === [ADD] AFFINE 기반 월드(위경도)→픽셀 변환 등록 ======================
+  let __REF = { lat: null, lon: null }; // 첫 GNSS를 기준 원점으로 사용
+
+  function metersFromRef(lat, lon) {
+    if (__REF.lat == null || __REF.lon == null) return { dE: 0, dN: 0 };
+    const toRad = (d) => d * (Math.PI / 180);
+    const lat0r = toRad(__REF.lat);
+    const dLat = toRad(lat - __REF.lat);
+    const dLon = toRad(lon - __REF.lon);
+    const dE = 6378137.0 * Math.cos(lat0r) * dLon; // 동쪽으로의 미터
+    const dN = 6378137.0 * dLat;                   // 북쪽으로의 미터
+    return { dE, dN };
+  }
+
+  function registerWorldToPixel() {
+    if (!window.SafeZone) return;
+    window.SafeZone.setWorldToPixel((lat, lon) => {
+      const { dE, dN } = metersFromRef(lat, lon);
+      const x = AFFINE.A * dE + AFFINE.B * dN + AFFINE.TX;
+      const y = AFFINE.C * dE + AFFINE.D * dN + AFFINE.TY;
+      return { x, y };
+    });
+  }
+  // 초기 1회 (참조점 잡히기 전이라도 호출 안전)
+  registerWorldToPixel();
+  // =======================================================================
+
   // --- Part 1b: UI 업데이트 -----------------------------------------------
   function updateData() {
     // GNSS → 속도
@@ -60,29 +87,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // VEHICLE → 경로 오차/RPM/연료
     if (stateCache.vehicle) {
       const dev = Number(stateCache.vehicle.deviation) || 0;
-      setTextSafe('#deviation-value', dev.toFixed(1));      // 경로 오차(우상단 작은 값)
+      setTextSafe('#deviation-value', dev.toFixed(1));
       setTextSafe('#rpm-value', stateCache.vehicle.engineSpeed ?? 0);
       setTextSafe('#fuel-gauge-value', stateCache.vehicle.fuelGauge ?? 0);
       tractorData.deviation = dev;
     }
 
-    // IMU → 차량 오차(가운데 큰 값 + 작은 카드), 롤/피치 표시(선택)
+    // IMU → 차량 오차, 롤/피치
     if (stateCache.imu) {
       const rollDeg  = Number(stateCache.imu.roll)  || 0;
       const pitchDeg = Number(stateCache.imu.pitch) || 0;
 
-      // 3D 적용을 위해 라디안
       tractorData.roll  = toRad(clampNum(rollDeg,  -90,  90));
       tractorData.pitch = toRad(clampNum(pitchDeg, -90,  90));
 
-      // 가운데/작은 카드에 보여줄 "차량오차(cm)" 계산
-      // (현장에 맞게 계수 조정 가능)
       const VEH_ERR_CM_PER_DEG = 2.0;
       const vehicleErrCm = Math.abs(rollDeg) * VEH_ERR_CM_PER_DEG;
-      
-
-    
-      setTextSafe('#vehicle-error-big',   vehicleErrCm.toFixed(1)); // 중앙 큰 숫자
+      setTextSafe('#vehicle-error-big', vehicleErrCm.toFixed(1));
     }
   }
   window.updateData = updateData;
@@ -125,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let sign = st.lastSign;
       if (st.prevLat != null && Number.isFinite(headingDeg) && stepDist !== null) {
+        const toRad = (d)=>d*(Math.PI/180);
         const lat0r = toRad(st.prevLat);
         const dLat = toRad(lat - st.prevLat);
         const dLon = toRad(lon - st.prevLon);
@@ -149,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let K_est = trackKmh / engineRpm;
         if (Number.isFinite(K_est)) {
           K_est *= K_UPWARD_BIAS;
-          // 괄호 위치 오류 수정
           st.K = Math.min(K_MAX, Math.max(K_MIN, (1 - K_ALPHA) * st.K + K_ALPHA * K_est));
         }
       }
@@ -228,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = Number(nmeaCoord);
     if (!Number.isFinite(val)) return NaN;
     const degrees = Math.floor(val / 100);
-    const minutes = val - degrees * 100; // ddmm.mmmm → mm.mmmm
+    const minutes = val - degrees * 100;
     return degrees + minutes / 60;
   }
 
@@ -283,7 +304,17 @@ document.addEventListener('DOMContentLoaded', () => {
     stateCache.gnss    = gnssData;
     stateCache.vehicle = vehicleData;
 
+    // [ADD] 첫 GNSS 기준점 세팅 + 변환 등록
+    if (__REF.lat == null && Number.isFinite(gnssData.lat) && Number.isFinite(gnssData.lon)) {
+      __REF.lat = gnssData.lat; __REF.lon = gnssData.lon;
+      registerWorldToPixel();
+    }
+
     safeUpdate();
+
+    // [ADD] 지오펜스 체크 (CSV 경로)
+    try { window.SafeZone?.checkLatLng(gnssData.lat, gnssData.lon, Date.now()); } catch {}
+
     if (window.hazardLogger && stateCache.imu) {
       callIf(true, () => window.hazardLogger.checkIMU(stateCache.imu));
     }
@@ -322,7 +353,18 @@ document.addEventListener('DOMContentLoaded', () => {
               safeUpdate();
               callIf(!!window.hazardLogger, () => window.hazardLogger.checkIMU(stateCache.imu));
             } else if (msg.action === 'gnss') {
-              stateCache.gnss = { ...msg }; safeUpdate();
+              stateCache.gnss = { ...msg };
+
+              // [ADD] 첫 GNSS 기준점 세팅 + 변환 등록
+              if (__REF.lat == null && Number.isFinite(stateCache.gnss.lat) && Number.isFinite(stateCache.gnss.lon)) {
+                __REF.lat = stateCache.gnss.lat; __REF.lon = stateCache.gnss.lon;
+                registerWorldToPixel();
+              }
+
+              safeUpdate();
+
+              // [ADD] 지오펜스 체크 (WS 경로)
+              try { window.SafeZone?.checkLatLng(stateCache.gnss.lat, stateCache.gnss.lon, Date.now()); } catch {}
             } else if (msg.action === 'vehicle') {
               stateCache.vehicle = { ...msg }; safeUpdate();
             }
@@ -338,10 +380,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Part 3: Babylon.js 3D 씬 ------------------------------------------
-  const canvas = document.getElementById('renderCanvas');
+  const renderCanvas = document.getElementById('renderCanvas');
   let engine;
-  if (canvas && window.BABYLON) {
-    engine = new BABYLON.Engine(canvas, true);
+  if (renderCanvas && window.BABYLON) {
+    engine = new BABYLON.Engine(renderCanvas, true);
   } else if (!window.BABYLON) {
     console.warn('[3D] BABYLON이 없습니다. 3D 렌더를 건너뜁니다.');
   }
@@ -359,20 +401,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     BABYLON.SceneLoader.ImportMeshAsync("", "./assets/", "tractor.glb", scene)
       .then((result) => {
-        // GLB는 rotationQuaternion 기본 → Euler 회전 사용 위해 해제
         result.meshes.forEach(m => { if (m.rotationQuaternion) m.rotationQuaternion = null; });
 
-        // 루트와 피벗 구성
         const root = result.meshes[0]; // __root__
         tractorPivot = new BABYLON.TransformNode("tractorPivot", scene);
         tractorPivot.rotationQuaternion = null; // Euler
         root.parent = tractorPivot;
 
-        // 스케일/위치
         root.scaling = new BABYLON.Vector3(2.5, 2.5, 2.5);
         root.position.y = -1;
 
-        // 바닥 & 화살표
         const ground = BABYLON.MeshBuilder.CreatePlane("ground", { width: 3, height: 160 }, scene);
         ground.rotation.x = Math.PI / 2;
         ground.rotation.y = Math.PI / 2;
@@ -410,10 +448,9 @@ document.addEventListener('DOMContentLoaded', () => {
           isBabylonInitialized = true;
           engine.runRenderLoop(() => {
             if (tractorPivot) {
-              // 좌우/앞뒤 기울기 + 좌우 오프셋
-              tractorPivot.rotation.x = tractorData.roll;   // roll → X
-              tractorPivot.rotation.y = Math.PI;            // 고정(heading 미사용)
-              tractorPivot.rotation.z = -tractorData.pitch; // pitch → Z(부호 반전)
+              tractorPivot.rotation.x = tractorData.roll;
+              tractorPivot.rotation.y = Math.PI;
+              tractorPivot.rotation.z = -tractorData.pitch;
               tractorPivot.position.z = tractorData.deviation / -10;
             }
 
@@ -446,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // === Camera modal: 버튼 클릭 시에만 재생 (모달 중앙) =====================
+  // === Camera modal ===
   (function bindCameraHandlers(){
     const modal   = document.getElementById('videoModal');
     const titleEl = document.getElementById('videoTitle');
@@ -461,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const openModal = () => {
       modal.classList.add('visible');
-      modal.style.display = 'flex';   // 중앙 배치(flex)
+      modal.style.display = 'flex';
     };
     const closeModal = () => {
       modal.classList.remove('visible');
@@ -566,5 +603,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   })();
+
+  // --- 개발용: 지오펜스 출입 로그 ---
+  window.addEventListener('geofence:exit',  e => console.log('%c[GEOFENCE] EXIT',  'color:#e74c3c', e.detail));
+  window.addEventListener('geofence:enter', e => console.log('%c[GEOFENCE] ENTER', 'color:#2ecc71', e.detail));
   // -----------------------------------------------------------------------
 });

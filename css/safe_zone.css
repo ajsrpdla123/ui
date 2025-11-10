@@ -20,11 +20,24 @@
     align-items: center;
     padding: 10px 15px;
     border-bottom: 1px solid #34495e;
+    /* === 겹침 방지용(기본) === */
+    gap: 8px;
+    min-height: 44px;
 }
-#saved-zones-list-popup .popup-header h3 { margin: 0; font-size: 1rem; }
+#saved-zones-list-popup .popup-header h3 { 
+    margin: 0; 
+    font-size: 1rem;
+    /* === 겹침 방지: 길면 말줄임 === */
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 #saved-zones-list-popup .popup-header button {
     background: none; border: none; color: #ecf0f1;
     font-size: 1.5rem; cursor: pointer;
+    width: 28px; height: 28px; line-height: 1;
+    display:flex; align-items:center; justify-content:center;
 }
 #saved-zones-list-popup .popup-body {
     padding: 15px;
@@ -82,11 +95,9 @@
 /* ---  지도 위 구획점(마커) --- */
 .zone-marker {
     position: absolute;
-    width: 32px; /* 이미지 크기에 맞게 조절 */
-    height: 32px; /* 이미지 크기에 맞게 조절 */
-    
+    width: 32px;
+    height: 32px;
     background-image: url('../css/01_safe_place.png');
-    
     background-size: contain;
     background-repeat: no-repeat;
     transform: translate(-50%, -50%);
@@ -144,3 +155,14 @@
 }
 
 .hidden { display: none !important; }
+
+/* === [강제 오버라이드: 제목/버튼 겹침 방지 보강] === */
+#saved-zones-list-popup { width: 340px; }
+#saved-zones-list-popup .popup-header h3{
+  max-width: 100%;
+}
+/* 저장된 구역 팝업: 헤더 겹침 방지 */
+#saved-zones-list-popup .popup-header h3{
+  flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#saved-zones-list-popup .popup-header button{ flex-shrink: 0; }

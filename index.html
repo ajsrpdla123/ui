@@ -139,15 +139,13 @@
         </div>
       </div>
 
-      <!-- === 상단 미니정보 3분할: 좌(주행모드) | 중앙(차량오차) | 우(수신상태) === -->
+      <!-- === 상단 미니정보 3분할 === -->
       <div class="quick-strip">
-        <!-- 1) 주행모드 : 기존 ID 유지 -->
         <div class="qcard left">
           <div class="qtitle">주행모드</div>
           <div class="qvalue qbadge" id="drive-mode-badge">정지</div>
         </div>
 
-        <!-- 2) 차량 오차(큰 숫자) : 기존 #vehicle-error-big 유지, 위치만 이동 -->
         <div class="qcard center">
           <div class="center-error">
             <div class="center-error-label">차량 오차</div>
@@ -157,7 +155,6 @@
           </div>
         </div>
 
-        <!-- 3) 수신상태 : 기존 ID 유지 -->
         <div class="qcard right">
           <div class="qtitle">수신상태</div>
           <div class="qvalue">
@@ -166,7 +163,6 @@
           </div>
         </div>
       </div>
-      <!-- === /상단 미니정보 3분할 === -->
 
       <!-- 3D -->
       <div class="tractor-graphic-view">
@@ -314,12 +310,38 @@
     <span>✅ 안전 구역 등록이 완료되었습니다.</span>
   </div>
 
+  <!-- ✅ [추가] Geofence Alert Modal (모달 사용 시) -->
+  <div id="geofence-alert-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2001; justify-content:center; align-items:center;">
+    <div id="geofence-alert" class="modal-content" style="width:480px; max-width:92%; border:2px solid #e74c3c;">
+      <h3 style="margin:0 0 10px; color:#ff6b6b;">안전구역 이탈</h3>
+      <p id="geofence-alert-msg" style="margin:0 0 18px;">안전구역을 벗어났습니다.</p>
+      <div class="actions" style="display:flex; gap:12px; justify-content:center;">
+        <button id="geofence-alert-ok" class="ack-btn" style="padding:10px 16px; border-radius:8px; background:#e74c3c; color:#fff; border:none;">확인</button>
+      </div>
+    </div>
+  </div>
+
   <!-- scripts -->
   <script src="./js/papaparse.min.js"></script>
+
+  <!-- ✅ 순서 중요: SafeZone 먼저, 그 다음 main.js -->
+  <script src="./js/safe_zone.js"></script>
   <script src="./js/main.js"></script>
+
   <script src="./js/map_data.js"></script>
   <script src="./js/log.js"></script>
-  <script src="./js/safe_zone.js"></script>
+
+  <!-- Geofence 모달 컨트롤러 -->
+  <script>
+    (function(){
+      const backdrop = document.getElementById('geofence-alert-backdrop');
+      const msgEl = document.getElementById('geofence-alert-msg');
+      const okBtn = document.getElementById('geofence-alert-ok');
+      window.showGeofenceAlert = (text) => { if (text) msgEl.textContent = text; backdrop.style.display = 'flex'; };
+      window.hideGeofenceAlert = () => { backdrop.style.display = 'none'; };
+      okBtn?.addEventListener('click', window.hideGeofenceAlert);
+    })();
+  </script>
 
   <!-- === [추가: 상태별 색 적용용 최종 스타일] === -->
   <style>
@@ -467,127 +489,121 @@
     sync();
   })();
   </script>
-<!-- 상태별 색상 기본값(흰색) -->
-<style>
-  #right-popup #vehicle-error-big,
-  #right-popup #deviation-value{
-    color:#fff !important;
-    text-shadow:none !important;
-  }
-</style>
 
-<script>
-(function(){
-  var big = document.getElementById('vehicle-error-big');
-  var small = document.getElementById('deviation-value');
-  if(!big) return;
-  var targets = [big].concat(small ? [small] : []);
-
-  function applyColor(hex, shadow){
-    targets.forEach(function(el){
-      el.style.setProperty('color', hex, 'important');           // CSS 전부 이김
-      if (shadow) el.style.setProperty('text-shadow', shadow, 'important');
-      else el.style.removeProperty('text-shadow');
-    });
-  }
-
-  // 임계값(원하면 조정)
-  var CAUTION_DEG = 10, WARNING_DEG = 18;
-
-  // ★ 판정 순서: 경고 → 주의 → 기본
-  function computeRisk(){
-    var b = document.body;
-    var tilt = (typeof window.tiltDeg === 'number') ? Math.abs(window.tiltDeg) : null;
-
-    var alertEl = document.getElementById('rollover-alert-popup');
-    var isWarning =
-      b.classList.contains('rollover-active') ||
-      b.classList.contains('warning-active')  ||
-      (alertEl && !alertEl.classList.contains('hidden')) ||
-      (tilt !== null && tilt >= WARNING_DEG);
-
-    var isCaution =
-      b.classList.contains('driving-caution-active') ||
-      b.classList.contains('caution-active') ||
-      (tilt !== null && tilt >= CAUTION_DEG);
-
-    if (isWarning) return 'warning';   // ← 경고가 있으면 무조건 빨강
-    if (isCaution) return 'caution';
-    return 'none';
-  }
-
-  function sync(){
-    var risk = computeRisk();
-    if (risk === 'warning'){
-      applyColor('#ff4d4d', '0 2px 10px rgba(255,77,77,.25)');
-    } else if (risk === 'caution'){
-      applyColor('#ffb74d', '0 2px 10px rgba(255,183,77,.22)');
-    } else {
-      applyColor('#fff', '');
+  <!-- 상태별 색상 기본값(흰색) -->
+  <style>
+    #right-popup #vehicle-error-big,
+    #right-popup #deviation-value{
+      color:#fff !important;
+      text-shadow:none !important;
     }
-  }
+  </style>
 
-  // body 클래스/데이터 변화 감지
-  new MutationObserver(sync).observe(document.body, {
-    attributes:true, attributeFilter:['class','data-caution','data-warning']
-  });
-  // 전복 팝업 표시/숨김 변화 감지
-  var alertEl = document.getElementById('rollover-alert-popup');
-  if (alertEl){
-    new MutationObserver(sync).observe(alertEl, {attributes:true, attributeFilter:['class']});
-  }
+  <script>
+  (function(){
+    var big = document.getElementById('vehicle-error-big');
+    var small = document.getElementById('deviation-value');
+    if(!big) return;
+    var targets = [big].concat(small ? [small] : []);
 
-  // (선택) 기울기값으로 자동 분류: window.tiltDeg만 갱신해주면 됨
-  setInterval(sync, 250);
+    function applyColor(hex, shadow){
+      targets.forEach(function(el){
+        el.style.setProperty('color', hex, 'important');           // CSS 전부 이김
+        if (shadow) el.style.setProperty('text-shadow', shadow, 'important');
+        else el.style.removeProperty('text-shadow');
+      });
+    }
 
-  // 외부에서 직접 토글하고 싶을 때 쓸 수 있는 API
-  window.setDrivingCaution = function(on){ document.body.classList.toggle('driving-caution-active', !!on); sync(); };
-  window.setRolloverWarning = function(on){ document.body.classList.toggle('rollover-active', !!on); sync(); };
+    // 임계값(원하면 조정)
+    var CAUTION_DEG = 10, WARNING_DEG = 18;
 
-  // 초기 적용
-  sync();
-})();
-</script>
-<script>
-/* === 작업시간: 새로고침하면 0부터 시작, 계속 카운트 === */
-(function(){
-  // 하단 두 번째 박스의 시간 표시 엘리먼트
-  var displayEl = document.querySelector('#bottom-info-popup .info-box:nth-child(2) .value');
-  if(!displayEl) return;
+    // ★ 판정 순서: 경고 → 주의 → 기본
+    function computeRisk(){
+      var b = document.body;
+      var tilt = (typeof window.tiltDeg === 'number') ? Math.abs(window.tiltDeg) : null;
 
-  // 0부터 시작
-  function fmt(sec){
-    sec = Math.max(0, Math.floor(sec));
-    var h = Math.floor(sec/3600);
-    var m = Math.floor((sec%3600)/60);
-    var s = sec%60;
-    var pad = n => String(n).padStart(2,'0');
-    return pad(h)+':'+pad(m)+':'+pad(s);
-  }
+      var alertEl = document.getElementById('rollover-alert-popup');
+      var isWarning =
+        b.classList.contains('rollover-active') ||
+        b.classList.contains('warning-active')  ||
+        (alertEl && !alertEl.classList.contains('hidden')) ||
+        (tilt !== null && tilt >= WARNING_DEG);
 
-  // 초기값 00:00:00으로 고정
-  displayEl.textContent = '00:00:00';
+      var isCaution =
+        b.classList.contains('driving-caution-active') ||
+        b.classList.contains('caution-active') ||
+        (tilt !== null && tilt >= CAUTION_DEG);
 
-  // 시작 시각 고정 후 매초 갱신
-  var start = Date.now();
-  function tick(){
-    var elapsedSec = Math.floor((Date.now() - start) / 1000);
-    displayEl.textContent = fmt(elapsedSec);
-  }
-  tick(); // 즉시 0 표시
-  var timerId = setInterval(tick, 1000);
+      if (isWarning) return 'warning';   // ← 경고가 있으면 무조건 빨강
+      if (isCaution) return 'caution';
+      return 'none';
+    }
 
-  // (선택) 외부에서 쓸 수 있는 간단 API
-  window.workTimer = {
-    reset: function(){ start = Date.now(); displayEl.textContent = '00:00:00'; },
-    stop: function(){ clearInterval(timerId); },
-    start: function(){ clearInterval(timerId); start = Date.now(); tick(); timerId = setInterval(tick, 1000); }
-  };
-})();
-</script>
+    function sync(){
+      var risk = computeRisk();
+      if (risk === 'warning'){
+        applyColor('#ff4d4d', '0 2px 10px rgba(255,77,77,.25)');
+      } else if (risk === 'caution'){
+        applyColor('#ffb74d', '0 2px 10px rgba(255,183,77,.22)');
+      } else {
+        applyColor('#fff', '');
+      }
+    }
 
-</body>
-</html>
+    // body 클래스/데이터 변화 감지
+    new MutationObserver(sync).observe(document.body, {
+      attributes:true, attributeFilter:['class','data-caution','data-warning']
+    });
+    // 전복 팝업 표시/숨김 변화 감지
+    var alertEl = document.getElementById('rollover-alert-popup');
+    if (alertEl){
+      new MutationObserver(sync).observe(alertEl, {attributes:true, attributeFilter:['class']});
+    }
+
+    // (선택) 기울기값으로 자동 분류: window.tiltDeg만 갱신해주면 됨
+    setInterval(sync, 250);
+
+    // 외부에서 직접 토글하고 싶을 때 쓸 수 있는 API
+    window.setDrivingCaution = function(on){ document.body.classList.toggle('driving-caution-active', !!on); sync(); };
+    window.setRolloverWarning = function(on){ document.body.classList.toggle('rollover-active', !!on); sync(); };
+
+    // 초기 적용
+    sync();
+  })();
+  </script>
+
+  <!-- 작업시간 카운터 -->
+  <script>
+  (function(){
+    var displayEl = document.querySelector('#bottom-info-popup .info-box:nth-child(2) .value');
+    if(!displayEl) return;
+
+    function fmt(sec){
+      sec = Math.max(0, Math.floor(sec));
+      var h = Math.floor(sec/3600);
+      var m = Math.floor((sec%3600)/60);
+      var s = sec%60;
+      var pad = n => String(n).padStart(2,'0');
+      return pad(h)+':'+pad(m)+':'+pad(s);
+    }
+
+    displayEl.textContent = '00:00:00';
+
+    var start = Date.now();
+    function tick(){
+      var elapsedSec = Math.floor((Date.now() - start) / 1000);
+      displayEl.textContent = fmt(elapsedSec);
+    }
+    tick();
+    var timerId = setInterval(tick, 1000);
+
+    window.workTimer = {
+      reset: function(){ start = Date.now(); displayEl.textContent = '00:00:00'; },
+      stop: function(){ clearInterval(timerId); },
+      start: function(){ clearInterval(timerId); start = Date.now(); tick(); timerId = setInterval(tick, 1000); }
+    };
+  })();
+  </script>
 
 </body>
 </html>
