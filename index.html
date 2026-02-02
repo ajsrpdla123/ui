@@ -17,6 +17,15 @@
   <link rel="stylesheet" href="./css/map.css" />
   <link rel="stylesheet" href="./css/log.css" />
   <link rel="stylesheet" href="./css/safe_zone.css" />
+
+  <!-- ▼ 헤더 겹침 방지: 저장된 안전 구역 팝업 헤더 정렬 보강 -->
+  <style>
+    #saved-zones-list-popup .popup-header{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    #saved-zones-list-popup .popup-header h3{ margin:0; white-space:nowrap; }
+    #saved-zones-list-popup .popup-header button{ flex:0 0 auto; }
+  </style>
 </head>
 
 <body>
@@ -77,8 +86,8 @@
         </button>
       </div>
       <div class="section-content">
-        <img class="info-image" src="./assets/tractor_implement_info/01_tractor.png" alt="Tractor" />
-        <div class="info-bar"><span>모델 명</span><span>Kubota MR1007(2022)</span></div>
+        <img class="info-image" src="./assets/tractor_implement_info/2.png" alt="Tractor" />
+        <div class="info-bar"><span>모델 명</span><span>Daedong RX630</span></div>
         <div class="info-bar"><span>사용 시간</span><span>1005hour</span></div>
       </div>
     </div>
@@ -91,8 +100,8 @@
         </button>
       </div>
       <div class="section-content">
-        <img class="info-image" src="./assets/tractor_implement_info/01_imple.png" alt="Rotavator" />
-        <div class="info-bar"><span>작업기명</span><span>Rotavator</span></div>
+        <img class="info-image" src="./assets/tractor_implement_info/attachement_visual_m.png" alt="Rotavator" />
+        <div class="info-bar"><span>작업기명</span><span>HC1850M</span></div>
         <div class="info-bar"><span>작업기 폭</span><span>2.4m</span></div>
       </div>
     </div>
@@ -139,7 +148,7 @@
         </div>
       </div>
 
-      <!-- === 상단 미니정보 3분할 === -->
+      <!-- 상단 미니정보 3분할 -->
       <div class="quick-strip">
         <div class="qcard left">
           <div class="qtitle">주행모드</div>
@@ -310,13 +319,16 @@
     <span>✅ 안전 구역 등록이 완료되었습니다.</span>
   </div>
 
-  <!-- ✅ [추가] Geofence Alert Modal (모달 사용 시) -->
-  <div id="geofence-alert-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2001; justify-content:center; align-items:center;">
-    <div id="geofence-alert" class="modal-content" style="width:480px; max-width:92%; border:2px solid #e74c3c;">
-      <h3 style="margin:0 0 10px; color:#ff6b6b;">안전구역 이탈</h3>
-      <p id="geofence-alert-msg" style="margin:0 0 18px;">안전구역을 벗어났습니다.</p>
+  <!-- ✅ Geofence Alert Modal (enter/exit 색 분리) -->
+  <div id="geofence-alert-backdrop"
+       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2001; justify-content:center; align-items:center;">
+    <div id="geofence-alert-box" class="modal-content geofence-exit"
+         style="width:480px; max-width:92%; border:2px solid; border-radius:12px; background:#223241; box-shadow:0 12px 40px rgba(0,0,0,.35);">
+      <h3 id="geofence-alert-title" style="margin:0 0 10px; text-align:center;">안전구역 이탈</h3>
+      <p id="geofence-alert-msg" style="margin:0 0 18px; text-align:center;">안전구역을 벗어났습니다.</p>
       <div class="actions" style="display:flex; gap:12px; justify-content:center;">
-        <button id="geofence-alert-ok" class="ack-btn" style="padding:10px 16px; border-radius:8px; background:#e74c3c; color:#fff; border:none;">확인</button>
+        <button id="geofence-alert-ok" class="ack-btn"
+                style="padding:10px 16px; border-radius:8px; color:#fff; border:none;">확인</button>
       </div>
     </div>
   </div>
@@ -331,15 +343,46 @@
   <script src="./js/map_data.js"></script>
   <script src="./js/log.js"></script>
 
-  <!-- Geofence 모달 컨트롤러 -->
+  <!-- Geofence 모달 컨트롤러 (오타 수정: geofence-alert-box로 정확히 바인딩) -->
   <script>
     (function(){
       const backdrop = document.getElementById('geofence-alert-backdrop');
-      const msgEl = document.getElementById('geofence-alert-msg');
-      const okBtn = document.getElementById('geofence-alert-ok');
-      window.showGeofenceAlert = (text) => { if (text) msgEl.textContent = text; backdrop.style.display = 'flex'; };
-      window.hideGeofenceAlert = () => { backdrop.style.display = 'none'; };
+      const alertBox = document.getElementById('geofence-alert-box'); // ✔ 올바른 ID
+      const titleEl  = document.getElementById('geofence-alert-title');
+      const msgEl    = document.getElementById('geofence-alert-msg');
+      const okBtn    = document.getElementById('geofence-alert-ok');
+
+      let autoTimer = null;
+
+      // type: 'exit' | 'enter'
+      window.showGeofenceAlert = (text, type = 'exit') => {
+        if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+        if (text) msgEl.textContent = text;
+
+        if (type === 'enter') {
+          titleEl.textContent = '안전구역 진입';
+          alertBox.style.borderColor = '#2ecc71';
+          titleEl.style.color       = '#2ecc71';
+          okBtn.style.background    = '#2ecc71';
+        } else {
+          titleEl.textContent = '안전구역 이탈';
+          alertBox.style.borderColor = '#e74c3c';
+          titleEl.style.color        = '#ff6b6b';
+          okBtn.style.background     = '#e74c3c';
+        }
+
+        backdrop.style.display = 'flex';
+        if (type === 'enter') autoTimer = setTimeout(() => window.hideGeofenceAlert(), 1500);
+      };
+
+      window.hideGeofenceAlert = () => {
+        if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+        backdrop.style.display = 'none';
+      };
+
       okBtn?.addEventListener('click', window.hideGeofenceAlert);
+      // 배경 클릭 시 닫힘
+      backdrop?.addEventListener('click', (e)=>{ if (e.target === backdrop) window.hideGeofenceAlert(); });
     })();
   </script>
 
@@ -365,7 +408,7 @@
     }
   </style>
 
-  <!-- === [추가: 위험도 → 색상 동기화 스니펫 (주의 우선)] === -->
+  <!-- 위험도 → 색상 동기화 스니펫 (주의 우선) -->
   <script>
   (function(){
     function isRolloverPopupVisible(){
@@ -375,39 +418,26 @@
     function syncRisk(){
       var b = document.body;
       var risk = 'none';
-      // 1) 주의가 최우선
       if (b.classList.contains('driving-caution-active')) {
         risk = 'caution';
-      }
-      // 2) 다음은 경고(전복) : 클래스 또는 팝업 노출
-      else if (b.classList.contains('rollover-active') || isRolloverPopupVisible()){
+      } else if (b.classList.contains('rollover-active') || isRolloverPopupVisible()){
         risk = 'warning';
       }
       b.setAttribute('data-risk', risk);
     }
-    // body 클래스 변화 감지
-    new MutationObserver(syncRisk).observe(document.body, {
-      attributes:true, attributeFilter:['class']
-    });
-    // 전복 팝업 표시/숨김 변화 감지
+    new MutationObserver(syncRisk).observe(document.body, {attributes:true, attributeFilter:['class']});
     var alertEl = document.getElementById('rollover-alert-popup');
     if (alertEl){
-      new MutationObserver(syncRisk).observe(alertEl, {
-        attributes:true, attributeFilter:['class']
-      });
+      new MutationObserver(syncRisk).observe(alertEl, {attributes:true, attributeFilter:['class']});
     }
-    // 초기 동기화
     syncRisk();
   })();
   </script>
+
   <!-- 상태별 색상 '강제' 적용 (주의 > 경고 > 기본) -->
   <style>
-    /* 기본값을 흰색으로 고정 (다른 규칙 무력화용) */
     #right-popup #vehicle-error-big,
-    #right-popup #deviation-value{
-      color:#fff !important;
-      text-shadow:none !important;
-    }
+    #right-popup #deviation-value{ color:#fff !important; text-shadow:none !important; }
   </style>
 
   <script>
@@ -419,27 +449,25 @@
 
     function applyColor(hex, shadow){
       targets.forEach(function(el){
-        el.style.setProperty('color', hex, 'important');              // ← CSS보다 우선
+        el.style.setProperty('color', hex, 'important');
         if (shadow) el.style.setProperty('text-shadow', shadow, 'important');
         else el.style.removeProperty('text-shadow');
       });
     }
 
-    // 상태 계산: '주의'가 항상 우선, 그다음 '경고', 나머지는 기본
     function computeRisk(){
       var b = document.body;
       var caution =
-        b.classList.contains('driving-caution-active') ||   // 너가 쓰는 '주의' 클래스
-        b.classList.contains('caution-active')      ||       // 대안 클래스
-        b.dataset.caution === '1';                           // 데이터 속성으로도 허용
+        b.classList.contains('driving-caution-active') ||
+        b.classList.contains('caution-active') ||
+        b.dataset.caution === '1';
 
-      // 경고(전복): 팝업 보이거나 클래스가 켜져 있을 때
       var alertEl = document.getElementById('rollover-alert-popup');
       var warning =
         (!caution) && (
-          b.classList.contains('rollover-active') ||         // 너가 쓰는 '경고' 클래스
-          b.classList.contains('warning-active')  ||         // 대안 클래스
-          (alertEl && !alertEl.classList.contains('hidden')) // 전복 팝업 노출
+          b.classList.contains('rollover-active') ||
+          b.classList.contains('warning-active')  ||
+          (alertEl && !alertEl.classList.contains('hidden'))
         );
 
       return caution ? 'caution' : (warning ? 'warning' : 'none');
@@ -456,18 +484,15 @@
       }
     }
 
-    // 바디 클래스/팝업 표시 변화 감지 → 자동 동기화
     new MutationObserver(sync).observe(document.body, {attributes:true, attributeFilter:['class','data-caution','data-warning']});
     var alertEl = document.getElementById('rollover-alert-popup');
     if (alertEl){
       new MutationObserver(sync).observe(alertEl, {attributes:true, attributeFilter:['class']});
     }
 
-    // (선택) 기울기 숫자로 자동 분류하고 싶다면: window.tiltDeg 값을 업데이트만 해줘
-    // 임계값은 원하는대로 바꿔도 됨
     var CAUTION_DEG = 10, WARNING_DEG = 18;
     var tiltTimer = setInterval(function(){
-      if (typeof window.tiltDeg !== 'number') return; // tiltDeg 없으면 패스
+      if (typeof window.tiltDeg !== 'number') return;
       var t = Math.abs(window.tiltDeg);
       if (t >= WARNING_DEG){
         document.body.classList.add('rollover-active');
@@ -481,11 +506,9 @@
       sync();
     }, 300);
 
-    // 외부 코드에서 직접 켜고 끄고 싶을 때 쓰는 API (원하면 사용)
     window.setDrivingCaution = function(on){ document.body.classList.toggle('driving-caution-active', !!on); sync(); };
     window.setRolloverWarning = function(on){ document.body.classList.toggle('rollover-active', !!on); sync(); };
 
-    // 초기 1회 적용
     sync();
   })();
   </script>
@@ -493,10 +516,7 @@
   <!-- 상태별 색상 기본값(흰색) -->
   <style>
     #right-popup #vehicle-error-big,
-    #right-popup #deviation-value{
-      color:#fff !important;
-      text-shadow:none !important;
-    }
+    #right-popup #deviation-value{ color:#fff !important; text-shadow:none !important; }
   </style>
 
   <script>
@@ -508,16 +528,14 @@
 
     function applyColor(hex, shadow){
       targets.forEach(function(el){
-        el.style.setProperty('color', hex, 'important');           // CSS 전부 이김
+        el.style.setProperty('color', hex, 'important');
         if (shadow) el.style.setProperty('text-shadow', shadow, 'important');
         else el.style.removeProperty('text-shadow');
       });
     }
 
-    // 임계값(원하면 조정)
     var CAUTION_DEG = 10, WARNING_DEG = 18;
 
-    // ★ 판정 순서: 경고 → 주의 → 기본
     function computeRisk(){
       var b = document.body;
       var tilt = (typeof window.tiltDeg === 'number') ? Math.abs(window.tiltDeg) : null;
@@ -534,7 +552,7 @@
         b.classList.contains('caution-active') ||
         (tilt !== null && tilt >= CAUTION_DEG);
 
-      if (isWarning) return 'warning';   // ← 경고가 있으면 무조건 빨강
+      if (isWarning) return 'warning';
       if (isCaution) return 'caution';
       return 'none';
     }
@@ -550,24 +568,20 @@
       }
     }
 
-    // body 클래스/데이터 변화 감지
     new MutationObserver(sync).observe(document.body, {
       attributes:true, attributeFilter:['class','data-caution','data-warning']
     });
-    // 전복 팝업 표시/숨김 변화 감지
+
     var alertEl = document.getElementById('rollover-alert-popup');
     if (alertEl){
       new MutationObserver(sync).observe(alertEl, {attributes:true, attributeFilter:['class']});
     }
 
-    // (선택) 기울기값으로 자동 분류: window.tiltDeg만 갱신해주면 됨
     setInterval(sync, 250);
 
-    // 외부에서 직접 토글하고 싶을 때 쓸 수 있는 API
     window.setDrivingCaution = function(on){ document.body.classList.toggle('driving-caution-active', !!on); sync(); };
     window.setRolloverWarning = function(on){ document.body.classList.toggle('rollover-active', !!on); sync(); };
 
-    // 초기 적용
     sync();
   })();
   </script>
@@ -604,6 +618,61 @@
     };
   })();
   </script>
+<!-- 사용자 정보 모달 -->
+<div id="user-modal" class="modal-backdrop hidden" style="z-index:6000;">
+  <div class="modal-content" style="max-width:560px;">
+    <div class="modal-header">
+      <h2>사용자 정보</h2>
+      <button id="close-user-modal" class="close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:16px; align-items:center; margin-bottom:14px;">
+        <img id="up-avatar" src="./assets/user.png" alt="avatar" style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
+        <div>
+          <div style="font-size:18px; font-weight:700;"><span id="up-name">-</span></div>
+          <div style="opacity:.8;">ID: <span id="up-id">-</span></div>
+        </div>
+      </div>
+
+      <div class="info-grid" style="display:grid; grid-template-columns:120px 1fr; gap:8px 12px;">
+        <div>나이</div>         <div id="up-age">28</div>
+        <div>성별</div>         <div id="up-gender">Male</div>
+        <div>이메일</div>       <div id="up-email">ajsrpdla123@naver.com</div>
+        <div>연락처</div>       <div id="up-phone">010-2530-5296</div>
+        <div>소속/역할</div>    <div id="up-role">국립순천대학교</div>
+        <div>지역</div>         <div id="up-location">전라남도 순천시</div>
+        <div>마지막 접속</div>  <div id="up-last">2025-11-27</div>
+        <div>메모</div>         <div id="up-notes">농부</div>
+      </div>
+    </div>
+  </div>
+</div>
+<hr style="margin:14px 0; opacity:.25;">
+
+<div id="user-edit-wrap">
+  <button id="user-edit-toggle" class="confirm-btn" style="padding:8px 12px;">편집</button>
+
+  <form id="user-edit-form" style="display:none; margin-top:12px;">
+    <div style="display:grid; grid-template-columns:120px 1fr; gap:8px 12px;">
+      <label>이름</label>    <input id="ue-name"    type="text" placeholder="홍길동">
+      <label>아이디</label>  <input id="ue-id"      type="text" placeholder="SCNU-001">
+      <label>나이</label>    <input id="ue-age"     type="number" min="0" step="1" placeholder="34">
+      <label>성별</label>    <input id="ue-gender"  type="text" placeholder="남/여/기타">
+      <label>이메일</label>  <input id="ue-email"   type="email" placeholder="you@example.com">
+      <label>연락처</label>  <input id="ue-phone"   type="text" placeholder="010-1234-5678">
+      <label>소속/역할</label><input id="ue-role"   type="text" placeholder="오퍼레이터">
+      <label>지역</label>    <input id="ue-location"type="text" placeholder="경기도 수원시">
+      <label>마지막 접속</label><input id="ue-last" type="text" placeholder="YYYY-MM-DD HH:mm">
+      <label>메모</label>    <input id="ue-notes"   type="text" placeholder="메모를 입력">
+      <label>프로필 이미지</label><input id="ue-avatar" type="text" placeholder="./assets/user.png">
+    </div>
+
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+      <button type="button" id="user-edit-cancel" class="cancel-btn">취소</button>
+      <button type="submit" id="user-edit-save" class="confirm-btn">저장</button>
+    </div>
+  </form>
+</div>
 
 </body>
 </html>

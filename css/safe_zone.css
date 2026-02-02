@@ -14,31 +14,35 @@
     display: flex;
     flex-direction: column;
 }
-#saved-zones-list-popup .popup-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    border-bottom: 1px solid #34495e;
-    /* === 겹침 방지용(기본) === */
-    gap: 8px;
-    min-height: 44px;
+#saved-zones-list-popup .popup-header{
+  position: relative;           /* 버튼 absolute 배치 기준 */
+  display: block;               /* flex 충돌 방지 */
+  padding: 10px 40px 10px 15px; /* 오른쪽에 버튼 자리 확보 */
+  border-bottom: 1px solid #34495e;
 }
-#saved-zones-list-popup .popup-header h3 { 
-    margin: 0; 
-    font-size: 1rem;
-    /* === 겹침 방지: 길면 말줄임 === */
-    flex: 1 1 auto;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+
+#saved-zones-list-popup .popup-header h3{
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;     
 }
-#saved-zones-list-popup .popup-header button {
-    background: none; border: none; color: #ecf0f1;
-    font-size: 1.5rem; cursor: pointer;
-    width: 28px; height: 28px; line-height: 1;
-    display:flex; align-items:center; justify-content:center;
+#saved-zones-list-popup .popup-header button{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px; height: 28px;    /* 고정폭 */
+  background: none;
+  border: none;
+  color: #ecf0f1;
+  font-size: 20px;              /* 크기 살짝 낮춰 안정화 */
+  line-height: 28px;
+  text-align: center;
+  cursor: pointer;
 }
+
 #saved-zones-list-popup .popup-body {
     padding: 15px;
     max-height: 200px;
